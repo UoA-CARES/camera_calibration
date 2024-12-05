@@ -9,8 +9,8 @@ from message_filters import Subscriber, TimeSynchronizer
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from .checker_calibrator import CheckerCalibrator
 from .charuco_calibrator import CharucoCalibrator
+from .checker_calibrator import CheckerCalibrator
 
 
 def compute_Q(P1, P2):
@@ -66,7 +66,13 @@ def save_image(
 
 
 class MonoCalibrationNode(Node):
-    def __init__(self, calibrator: CheckerCalibrator | CharucoCalibrator):
+    def __init__(
+        self,
+        calibrator: CheckerCalibrator | CharucoCalibrator,
+        camera_name: str,
+        save_directory: str,
+        diff_threshold: float = 0,
+    ):
         super().__init__("mono_calibration_node")
 
         self.calibrator = calibrator
@@ -75,18 +81,18 @@ class MonoCalibrationNode(Node):
 
         date = datetime.now().strftime("%y_%m_%d_%H-%M-%S")
 
-        self.save_directory = os.path.expanduser(f"~/calibration_images/{date}")
+        self.save_directory = f"{save_directory}/{date}"
         if not os.path.exists(self.save_directory):
             os.makedirs(self.save_directory)
 
-        self.diff_threshold = 50
+        self.diff_threshold = diff_threshold
 
         self.image_size = (0, 0)
 
         self.corners = []
         self.object_points = []
 
-        self.camera_name = "left"
+        self.camera_name = camera_name
 
         self.create_subscription(
             Image, f"{self.camera_name}/image_color", self.image_callback, 10
@@ -97,7 +103,7 @@ class MonoCalibrationNode(Node):
     def image_callback(self, image_msg: Image) -> None:
         image_bgr = self.cv_bridge.imgmsg_to_cv2(image_msg)
 
-        ret, corners, object_points = self.calibrator.process_image(image_bgr)
+        ret, corners, object_points = self.calibrator.process_image(image_bgr, "Image")
 
         if ret:
             sim_score = corners_similarity_score(corners, self.corners)
@@ -152,9 +158,11 @@ class StereoCalibrationNode(Node):
         left_camera_name: str,
         right_camera_name: str,
         save_directory: str,
-        diff_threshold: int = 0,
+        diff_threshold: float = 0,
     ):
         super().__init__("stereo_calibration_node")
+
+        self.get_logger().info(f"Opencv version: {cv2.__version__}")
 
         self.calibrator = calibrator
 
@@ -192,7 +200,9 @@ class StereoCalibrationNode(Node):
 
     def _process_images(self, image_left_bgr: np.ndarray, image_right_bgr: np.ndarray):
         ret, corners_left, corners_right, object_points = (
-            self.calibrator.process_images(image_left_bgr, image_right_bgr)
+            self.calibrator.process_images(
+                image_left_bgr.copy(), image_right_bgr.copy()
+            )
         )
 
         if ret:
@@ -300,7 +310,7 @@ class StereoCalibrationNode(Node):
             flags=cv2.CALIB_FIX_INTRINSIC,
         )
 
-        R1, R2, P1, P2, Q, _, _ = cv2.stereoRectify(
+        R1, R2, P1, P2, _, _, _ = cv2.stereoRectify(
             camera_matrix_left,
             distortion_left,
             camera_matrix_right,

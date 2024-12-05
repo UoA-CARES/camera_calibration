@@ -84,6 +84,14 @@ def create_charuco_calibrator(paramater_node: Node) -> CharucoCalibrator:
         paramater_node.get_parameter("scale_factor").get_parameter_value().double_value
     )
 
+    paramater_node.get_logger().info("Calibrator Parameters:")
+    paramater_node.get_logger().info(f"Board Row: {board_row}")
+    paramater_node.get_logger().info(f"Board Col: {board_col}")
+    paramater_node.get_logger().info(f"Board Size: {board_size}")
+    paramater_node.get_logger().info(f"Checker Size: {checker_size}")
+    paramater_node.get_logger().info(f"Marker Size: {marker_size}")
+    paramater_node.get_logger().info(f"Dictionary ID: {dictionary_id}")
+
     return CharucoCalibrator(
         board_size=board_size,
         checker_size=checker_size,
@@ -123,7 +131,7 @@ def create_mono_node(
     temp_node: Node,
     calibrator: CheckerCalibrator,
     save_directory: str,
-    diff_threshold: str,
+    diff_threshold: float,
 ) -> MonoCalibrationNode:
     temp_node.declare_parameter("camera_name", "left")
 
@@ -149,7 +157,7 @@ def main():
     param_node.declare_parameter("board_type", "")
     param_node.declare_parameter("diff_threshold", 0.0)
     param_node.declare_parameter(
-        "save_directory", os.path.expanduser(f"~/calibration_images/")
+        "save_directory", os.path.expanduser("~/calibration_images/")
     )
 
     calibration_type = (

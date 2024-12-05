@@ -11,7 +11,7 @@ class CheckerCalibrator:
 
         self.scale_factor = scale_factor
 
-    def process_image(
+    def _detect_corners(
         self, image_bgr: np.ndarray, name: str
     ) -> tuple[bool, np.ndarray]:
         iamge_gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
@@ -53,9 +53,19 @@ class CheckerCalibrator:
         object_points = object_points * self.checker_size
         return object_points
 
+    def process_image(
+        self, image_bgr: np.ndarray, name: str
+    ) -> tuple[bool, np.ndarray, np.ndarray]:
+
+        ret, corners = self._detect_corners(image_bgr, name)
+
+        object_points = self._get_object_points()
+
+        return ret, corners, object_points
+
     def process_images(self, image_left_bgr: np.ndarray, image_right_bgr: np.ndarray):
-        ret_left, corners_left = self.process_image(image_left_bgr, "left")
-        ret_right, corners_right = self.process_image(image_right_bgr, "right")
+        ret_left, corners_left = self._detect_corners(image_left_bgr, "left")
+        ret_right, corners_right = self._detect_corners(image_right_bgr, "right")
 
         object_points = self._get_object_points()
 
