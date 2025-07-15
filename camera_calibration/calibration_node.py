@@ -19,7 +19,7 @@ from .charuco_calibrator import CharucoCalibrator
 # P_right = np.array(camera_info_right["projection_matrix"]).reshape(3, 4)
 
 
-def create_checker_calibrator(paramater_node: Node) -> CheckerCalibrator:
+def create_checker_calibrator(paramater_node: Node, display: bool) -> CheckerCalibrator:
     paramater_node.declare_parameter("board_row", 6)
     paramater_node.declare_parameter("board_col", 9)
     paramater_node.declare_parameter("checker_size", 0.036)
@@ -44,11 +44,11 @@ def create_checker_calibrator(paramater_node: Node) -> CheckerCalibrator:
     )
 
     return CheckerCalibrator(
-        board_size=board_size, checker_size=checker_size, scale_factor=scale_factor
+        board_size=board_size, checker_size=checker_size, scale_factor=scale_factor, display=display
     )
 
 
-def create_charuco_calibrator(paramater_node: Node) -> CharucoCalibrator:
+def create_charuco_calibrator(paramater_node: Node, display: bool) -> CharucoCalibrator:
     paramater_node.declare_parameter("board_row", 6)
     paramater_node.declare_parameter("board_col", 9)
     paramater_node.declare_parameter("checker_size", 0.036)
@@ -98,6 +98,7 @@ def create_charuco_calibrator(paramater_node: Node) -> CharucoCalibrator:
         marker_size=marker_size,
         dictionary_id=dictionary_id,
         scale_factor=scale_factor,
+        display=display,
     )
 
 
@@ -144,8 +145,65 @@ def create_mono_node(
         camera_name=camera_name,
         save_directory=save_directory,
         diff_threshold=diff_threshold,
+        # display=display,
     )
 
+def load_stereo_image_pairs(folder_path, prefix_left='left_', prefix_right='right_', ext='.png'):
+    image_pairs = []
+
+    # List all files
+    files = os.listdir(folder_path)
+
+    # Filter and sort to ensure matching order
+    left_files = sorted([f for f in files if f.startswith(prefix_left) and f.endswith(ext)])
+    right_files = sorted([f for f in files if f.startswith(prefix_right) and f.endswith(ext)])
+
+    # Match by index (assumes naming like left_0.png, right_0.png)
+    for left, right in zip(left_files, right_files):
+        left_path = os.path.join(folder_path, left)
+        right_path = os.path.join(folder_path, right)
+
+        left_img = cv2.imread(left_path, cv2.IMREAD_COLOR)
+        right_img = cv2.imread(right_path, cv2.IMREAD_COLOR)
+
+        if left_img is not None and right_img is not None:
+            image_pairs.append((left_img, right_img))
+
+    return image_pairs
+
+def load_images(calibration_node: MonoCalibrationNode | StereoCalibrationNode, load_path: str):
+    calibration_node.get_logger().info(f"Loading images from {load_path}")
+
+    if not os.path.exists(load_path):
+        raise FileNotFoundError(f"Path does not exist: {load_path}")
+
+    if isinstance(calibration_node, StereoCalibrationNode):
+        stereo_images = load_stereo_image_pairs(load_path)
+        calibration_node.get_logger().info(f"Loaded {len(stereo_images)} stereo image pairs")
+
+        for left_img, right_img in stereo_images:
+            calibration_node.process_images(left_img, right_img)
+
+    elif isinstance(calibration_node, MonoCalibrationNode):
+        pass
+
+    calibration_node.calibrate()
+
+def live_capture(calibration_type: str, board_type: str, calibration_node: MonoCalibrationNode | StereoCalibrationNode):
+    calibration_node.get_logger().info(
+        f"{calibration_type} calibration is running with {board_type} board - push esc to exit or c to calibrate"
+    )
+
+    while rclpy.ok():
+        # Process one callback if available
+        rclpy.spin_once(calibration_node)
+
+        key = cv2.waitKey(1)
+        if key == ord("c"):
+            calibration_node.calibrate()
+            break
+        elif key == 27:  # esc
+            break
 
 def main():
     rclpy.init()
@@ -159,6 +217,8 @@ def main():
     param_node.declare_parameter(
         "save_directory", os.path.expanduser("~/calibration_images/")
     )
+    param_node.declare_parameter("load_path", "")
+    param_node.declare_parameter("display", True)
 
     calibration_type = (
         param_node.get_parameter("calibration_type").get_parameter_value().string_value
@@ -176,11 +236,18 @@ def main():
         param_node.get_parameter("diff_threshold").get_parameter_value().double_value
     )
 
+    load_path = param_node.get_parameter("load_path").get_parameter_value().string_value
+    load_path = os.path.expanduser(load_path)
+
+    display = (
+        param_node.get_parameter("display").get_parameter_value().bool_value
+    )
+
     calibrator: CheckerCalibrator | CharucoCalibrator
     if board_type == "checker":
-        calibrator = create_checker_calibrator(param_node)
+        calibrator = create_checker_calibrator(param_node, display)
     elif board_type == "charuco":
-        calibrator = create_charuco_calibrator(param_node)
+        calibrator = create_charuco_calibrator(param_node, display)
     else:
         raise ValueError(f"Invalid board type: {board_type}")
 
@@ -196,25 +263,16 @@ def main():
     else:
         raise ValueError(f"Invalid calibration type: {calibration_type}")
 
-    calibration_node.get_logger().info(
-        f"{calibration_type} calibration is running with {board_type} board - push esc to exit or c to calibrate"
-    )
-
     param_node.destroy_node()
 
-    while rclpy.ok():
-        # Process one callback if available
-        rclpy.spin_once(calibration_node)
-
-        key = cv2.waitKey(1)
-        if key == ord("c"):
-            calibration_node.calibrate()
-            break
-        elif key == 27:  # esc
-            break
+    if load_path != "":
+        load_images(calibration_node, load_path)
+    else:
+        live_capture(calibration_type, board_type, calibration_node)
 
     calibration_node.destroy_node()
     rclpy.shutdown()
+
 
 
 if __name__ == "__main__":

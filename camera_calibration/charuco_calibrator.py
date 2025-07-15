@@ -10,6 +10,7 @@ class CharucoCalibrator:
         marker_size: float,
         dictionary_id: int,
         scale_factor: float,
+        display: bool = True,
     ):
         self.board_size = board_size
         self.checker_size = checker_size
@@ -31,6 +32,8 @@ class CharucoCalibrator:
 
         # TODO incorporate this into the class
         self.scale_factor = scale_factor
+
+        self.display = display
 
     def _balance_object_points(
         self,
@@ -86,8 +89,10 @@ class CharucoCalibrator:
                 image_bgr, charuco_corners, charuco_ids
             )
 
-        cv2.namedWindow(name, cv2.WINDOW_NORMAL)
-        cv2.imshow(name, image_bgr)
+        if self.display:
+            cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(name, 500, 500)
+            cv2.imshow(name, image_bgr)
 
         return ret, charuco_ids, charuco_corners
 

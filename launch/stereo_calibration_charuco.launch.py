@@ -50,7 +50,7 @@ def generate_launch_description():
 
     declare_scale_factor = DeclareLaunchArgument(
         "scale_factor",
-        default_value="0.5",
+        default_value="1.0",
         description="Scale factor to improve detection time",
     )
 
@@ -58,6 +58,12 @@ def generate_launch_description():
         "save_path",
         default_value="",
         description="Path to save camera calibration files - will save as camera_name_calibration.yaml files",
+    )
+
+    declare_load_path = DeclareLaunchArgument(
+        "load_path",
+        default_value="",
+        description="Path to load images for calibration - if provided, will not use live capture",
     )
 
     declare_display = DeclareLaunchArgument(
@@ -75,6 +81,7 @@ def generate_launch_description():
     diff_threshold = LaunchConfiguration(declare_diff_threshold.name)
     scale_factor = LaunchConfiguration(declare_scale_factor.name)
     save_directory = LaunchConfiguration(declare_save_directory.name)
+    load_path = LaunchConfiguration(declare_load_path.name)
     display = LaunchConfiguration(declare_display.name)
 
     return LaunchDescription(
@@ -90,6 +97,7 @@ def generate_launch_description():
             declare_diff_threshold,
             declare_scale_factor,
             declare_save_directory,
+            declare_load_path,
             declare_display,
             Node(
                 package="camera_calibration",
@@ -109,6 +117,7 @@ def generate_launch_description():
                         declare_diff_threshold.name: diff_threshold,
                         declare_scale_factor.name: scale_factor,
                         declare_save_directory.name: save_directory,
+                        declare_load_path.name: load_path,
                         declare_display.name: display,
                     },
                     {"board_type": "charuco"},

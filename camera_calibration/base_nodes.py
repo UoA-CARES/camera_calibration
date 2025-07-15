@@ -100,9 +100,7 @@ class MonoCalibrationNode(Node):
 
         self.cv_bridge = CvBridge()
 
-    def image_callback(self, image_msg: Image) -> None:
-        image_bgr = self.cv_bridge.imgmsg_to_cv2(image_msg)
-
+    def process_images(self, image_bgr: np.ndarray):
         ret, corners, object_points = self.calibrator.process_image(image_bgr, "Image")
 
         if ret:
@@ -117,6 +115,11 @@ class MonoCalibrationNode(Node):
                 save_image(self.save_directory, f"{len(self.corners)}", image_bgr)
 
                 self.get_logger().info(f"Adding corners: {len(self.corners)}")
+
+    def image_callback(self, image_msg: Image) -> None:
+        image_bgr = self.cv_bridge.imgmsg_to_cv2(image_msg)
+
+        self.process_images(image_bgr)
 
     def calibrate(self) -> None:
         self.get_logger().info(
@@ -198,7 +201,7 @@ class StereoCalibrationNode(Node):
         )
         self.sync.registerCallback(self.SyncCallback)
 
-    def _process_images(self, image_left_bgr: np.ndarray, image_right_bgr: np.ndarray):
+    def process_images(self, image_left_bgr: np.ndarray, image_right_bgr: np.ndarray):
         ret, corners_left, corners_right, object_points = (
             self.calibrator.process_images(
                 image_left_bgr.copy(), image_right_bgr.copy()
@@ -239,7 +242,7 @@ class StereoCalibrationNode(Node):
         image_left_bgr = self.cv_bridge.imgmsg_to_cv2(image_left_msg)
         image_right_bgr = self.cv_bridge.imgmsg_to_cv2(image_right_msg)
 
-        self._process_images(image_left_bgr, image_right_bgr)
+        self.process_images(image_left_bgr, image_right_bgr)
 
     def _save_calibration(
         self,
