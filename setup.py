@@ -17,7 +17,7 @@ setup(
             glob(os.path.join("launch", "*launch.[pxy][yma]*")),
         ),
     ],
-    install_requires=["setuptools"],
+    install_requires=open('requirements.txt').read().splitlines(),
     zip_safe=True,
     maintainer="anyone",
     maintainer_email="henryamwilliams@gmail.com",

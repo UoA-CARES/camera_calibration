@@ -145,7 +145,6 @@ def create_mono_node(
         camera_name=camera_name,
         save_directory=save_directory,
         diff_threshold=diff_threshold,
-        # display=display,
     )
 
 def load_stereo_image_pairs(folder_path, prefix_left='left_', prefix_right='right_', ext='.png'):
