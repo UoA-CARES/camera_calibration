@@ -44,7 +44,10 @@ def create_checker_calibrator(paramater_node: Node, display: bool) -> CheckerCal
     )
 
     return CheckerCalibrator(
-        board_size=board_size, checker_size=checker_size, scale_factor=scale_factor, display=display
+        board_size=board_size,
+        checker_size=checker_size,
+        scale_factor=scale_factor,
+        display=display,
     )
 
 
@@ -147,15 +150,25 @@ def create_mono_node(
         diff_threshold=diff_threshold,
     )
 
-def load_stereo_image_pairs(folder_path, prefix_left='left_', prefix_right='right_', ext='.png'):
+
+def load_stereo_image_pairs(
+    folder_path: str,
+    prefix_left: str = "left_",
+    prefix_right: str = "right_",
+    ext: str = ".png",
+):
     image_pairs = []
 
     # List all files
     files = os.listdir(folder_path)
 
     # Filter and sort to ensure matching order
-    left_files = sorted([f for f in files if f.startswith(prefix_left) and f.endswith(ext)])
-    right_files = sorted([f for f in files if f.startswith(prefix_right) and f.endswith(ext)])
+    left_files = sorted(
+        [f for f in files if f.startswith(prefix_left) and f.endswith(ext)]
+    )
+    right_files = sorted(
+        [f for f in files if f.startswith(prefix_right) and f.endswith(ext)]
+    )
 
     # Match by index (assumes naming like left_0.png, right_0.png)
     for left, right in zip(left_files, right_files):
@@ -170,7 +183,30 @@ def load_stereo_image_pairs(folder_path, prefix_left='left_', prefix_right='righ
 
     return image_pairs
 
-def load_images(calibration_node: MonoCalibrationNode | StereoCalibrationNode, load_path: str):
+
+def load_mono_images(folder_path: str, ext: str = ".png"):
+    images = []
+
+    # List all files
+    files = os.listdir(folder_path)
+
+    # Filter and sort to ensure matching order
+    image_files = sorted([f for f in files if f.endswith(ext)])
+
+    # Load images
+    for img_file in image_files:
+        img_path = os.path.join(folder_path, img_file)
+        img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+
+        if img is not None:
+            images.append(img)
+
+    return images
+
+
+def load_images(
+    calibration_node: MonoCalibrationNode | StereoCalibrationNode, load_path: str
+):
     calibration_node.get_logger().info(f"Loading images from {load_path}")
 
     if not os.path.exists(load_path):
@@ -178,17 +214,28 @@ def load_images(calibration_node: MonoCalibrationNode | StereoCalibrationNode, l
 
     if isinstance(calibration_node, StereoCalibrationNode):
         stereo_images = load_stereo_image_pairs(load_path)
-        calibration_node.get_logger().info(f"Loaded {len(stereo_images)} stereo image pairs")
+        calibration_node.get_logger().info(
+            f"Loaded {len(stereo_images)} stereo image pairs"
+        )
 
         for left_img, right_img in stereo_images:
             calibration_node.process_images(left_img, right_img)
 
     elif isinstance(calibration_node, MonoCalibrationNode):
-        pass
+        mono_images = load_mono_images(load_path)
+        calibration_node.get_logger().info(f"Loaded {len(mono_images)} mono images")
+
+        for img in mono_images:
+            calibration_node.process_image(img)
 
     calibration_node.calibrate()
 
-def live_capture(calibration_type: str, board_type: str, calibration_node: MonoCalibrationNode | StereoCalibrationNode):
+
+def live_capture(
+    calibration_type: str,
+    board_type: str,
+    calibration_node: MonoCalibrationNode | StereoCalibrationNode,
+):
     calibration_node.get_logger().info(
         f"{calibration_type} calibration is running with {board_type} board - push esc to exit or c to calibrate"
     )
@@ -203,6 +250,7 @@ def live_capture(calibration_type: str, board_type: str, calibration_node: MonoC
             break
         elif key == 27:  # esc
             break
+
 
 def main():
     rclpy.init()
@@ -238,9 +286,7 @@ def main():
     load_path = param_node.get_parameter("load_path").get_parameter_value().string_value
     load_path = os.path.expanduser(load_path)
 
-    display = (
-        param_node.get_parameter("display").get_parameter_value().bool_value
-    )
+    display = param_node.get_parameter("display").get_parameter_value().bool_value
 
     calibrator: CheckerCalibrator | CharucoCalibrator
     if board_type == "checker":
@@ -271,7 +317,6 @@ def main():
 
     calibration_node.destroy_node()
     rclpy.shutdown()
-
 
 
 if __name__ == "__main__":

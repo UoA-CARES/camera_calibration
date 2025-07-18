@@ -101,7 +101,9 @@ class MonoCalibrationNode(Node):
         self.cv_bridge = CvBridge()
 
     def process_images(self, image_bgr: np.ndarray):
-        ret, corners, object_points = self.calibrator.process_image(image_bgr, "Image")
+        ret, corners, object_points = self.calibrator.process_image(
+            image_bgr.copy(), "Image"
+        )
 
         if ret:
             sim_score = corners_similarity_score(corners, self.corners)

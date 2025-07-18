@@ -4,7 +4,11 @@ import numpy as np
 
 class CheckerCalibrator:
     def __init__(
-        self, board_size: tuple[int, int], checker_size: float, scale_factor: float, display: bool = True
+        self,
+        board_size: tuple[int, int],
+        checker_size: float,
+        scale_factor: float,
+        display: bool = True,
     ):
         self.board_size = board_size
         self.checker_size = checker_size

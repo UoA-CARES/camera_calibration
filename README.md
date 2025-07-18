@@ -8,7 +8,7 @@ You will first need to install the Pylon software (>= 8.0) from [here](https://w
 
 Run `pip3 install -r requirements' in the **root directory** of this package.
 
-`colcon build` your ros2 workspace.
+`colcon build` your ros2 workspace. 
 
 # Usage
 This package can be utilised to calibrate stereo or mono (single) camera setups.

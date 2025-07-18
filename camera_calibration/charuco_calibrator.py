@@ -107,7 +107,9 @@ class CharucoCalibrator:
 
         ret, charuco_ids, charuco_corners = self._detect_corners(image_bgr, name)
 
-        object_points = self._get_object_points(charuco_ids)
+        object_points = np.array([])
+        if ret:
+            object_points = self._get_object_points(charuco_ids)
 
         return ret, charuco_corners, object_points
 
