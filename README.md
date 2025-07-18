@@ -2,8 +2,6 @@
 ROS package for calibrating cameras via Checker or Charuco boards - stereo or mono camera systems.
 
 ## Installation Instructions
-You will first need to install the Pylon software (>= 8.0) from [here](https://www.baslerweb.com/en/software/pylon/) 
-
 `git clone`the repository into your desired ros2 workspace directory on your local machine.
 
 Run `pip3 install -r requirements' in the **root directory** of this package.
