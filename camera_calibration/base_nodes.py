@@ -7,6 +7,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from message_filters import Subscriber, TimeSynchronizer
 from rclpy.node import Node
+from scipy.spatial import cKDTree
 from sensor_msgs.msg import Image
 
 from .charuco_calibrator import CharucoCalibrator
@@ -37,24 +38,31 @@ def compute_Q(P1, P2):
 def corners_similarity_score(
     corners: np.ndarray, corners_all: list[np.ndarray]
 ) -> float:
-    min_diff = float("inf")
+    if len(corners) == 0:
+        return float("inf")
 
-    for corners_other in corners_all:
-        if corners.shape != corners_other.shape:
+    min_score = float("inf")
+
+    # Flatten corners to Nx2
+    corners_flat = corners.reshape(-1, 2)
+
+    for other in corners_all:
+        if len(other) == 0:
             continue
 
-        total_diff = 0.0
-        for corner, corner_other in zip(corners, corners_other):
-            x_diff = corner[0][0] - corner_other[0][0]
-            y_diff = corner[0][1] - corner_other[0][1]
-            total_diff += math.sqrt(x_diff**2 + y_diff**2)
+        other_flat = other.reshape(-1, 2)
 
-        if total_diff < min_diff:
-            min_diff = total_diff
+        # Use KDTree to find nearest neighbors
+        tree = cKDTree(other_flat)
+        dists, _ = tree.query(corners_flat, k=1)
 
-    min_diff = min_diff / corners.shape[0]
+        # Mean distance to nearest corner
+        score = np.mean(dists)
 
-    return min_diff
+        if score < min_score:
+            min_score = score
+
+    return min_score
 
 
 def save_image(
